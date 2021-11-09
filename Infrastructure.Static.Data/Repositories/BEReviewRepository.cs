@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace Infrastructure.Static.Data.Repositories
 {
-    public class BEReviewRepository: IBEReviewRepository
+    public class BEReviewRepository : IBEReviewRepository
     {
 
         private readonly List<BEReview> _allReviews;
@@ -18,71 +18,54 @@ namespace Infrastructure.Static.Data.Repositories
             string jsonAsString = textReader.ReadToEnd();
             _allReviews = JsonConvert.DeserializeObject<List<BEReview>>(jsonAsString);
         }
-
+        
         public int GetNumberOfReviewsFromReviewer(int reviewer)
         {
-            int numberOfReviews= _allReviews.Count(review => review.Reviewer == reviewer);
+            int numberOfReviews = _allReviews.Count(review => review.Reviewer == reviewer);
             if (numberOfReviews == 0)
             {
-                throw new InvalidOperationException("No reviewer was found with id " + reviewer);
+                NoReviewerFound();
             }
 
             return numberOfReviews;
         }
-
         public double GetAverageRateFromReviewer(int reviewer)
         {
             int numberOfReviews = GetNumberOfReviewsFromReviewer(reviewer);
             IEnumerable<int> totalReviewsArray = _allReviews.Where(r => r.Reviewer == reviewer).Select(r => r.Grade);
             int totalReviews = 0;
-            
+
             if (totalReviewsArray.Count() == null)
             {
-                throw new InvalidOperationException("No reviewer was found with id " + reviewer);
+                NoReviewerFound();
             }
-            
+
             foreach (var review in totalReviewsArray)
             {
                 totalReviews += review;
             }
-            
+
             double averageRate = (double) totalReviews / numberOfReviews;
             return averageRate;
         }
-
         public int GetNumberOfRatesByReviewer(int reviewer, int rate)
         {
-            if (reviewer <= 0)
-            {
-                throw new InvalidOperationException("The reviewer Id must be above zero");
-            }else if (rate < 0)
-            {
-                throw new InvalidOperationException("The rating is bellow range");
-            }else if (rate > 5)
-            {
-                throw new InvalidOperationException("The rating is above range");
-            }
-            else
-            {
-                var numberOfRatesByReviewer=_allReviews
-                    .Where(r => r.Reviewer == reviewer).Count(rt => rt.Grade == rate);
+            var correctReviewer = GetReviewer(reviewer);
+            var correctRate = RateBelowOrAbove(rate);
 
-                if (numberOfRatesByReviewer == 0)
-                {
-                    throw new InvalidOperationException("No rates where found for reviewer");
-                }
-                else
-                {
-                    return numberOfRatesByReviewer;
-                }
+            var numberOfRatesByReviewer = _allReviews
+                .Where(r => r.Reviewer == correctReviewer).Count(rt => rt.Grade == correctRate);
+
+            if (numberOfRatesByReviewer == 0)
+            {
+                throw new InvalidOperationException("No rates where found for reviewer");
             }
+            return numberOfRatesByReviewer;
         }
-
         public int GetNumberOfReviews(int movie)
         {
             return _allReviews.Count(r => r.Movie == movie);
         }
-
         public double GetAverageRateOfMovie(int movie)
         {
             int numberOfReviews = GetNumberOfReviews(movie);
@@ -93,24 +76,17 @@ namespace Infrastructure.Static.Data.Repositories
             {
                 totalReviews += review;
             }
-            
+
             double averageRate = (double) totalReviews / numberOfReviews;
             return averageRate;
         }
-
         public int GetNumberOfRates(int movie, int rate)
         {
-            if (movie < 0)
-            {
-                throw new InvalidOperationException("Movie id must be above zero");
-            }else if (rate is > 5 or < 0)
-            {
-                throw new InvalidOperationException("Rate is outside of the range");
-            }
+            var correctMovie = MovieBelowOrAbove(movie);
+            var correctRate = RateBelowOrAbove(rate);
             return _allReviews
-                .Where(r => r.Movie == movie).Count(rt => rt.Grade == rate);
+                .Where(r => r.Movie == correctMovie).Count(rt => rt.Grade == correctRate);
         }
-
         public List<int> GetMoviesWithHighestNumberOfTopRates()
         {
             int highestId = _allReviews.Max(m => m.Movie);
@@ -122,18 +98,16 @@ namespace Infrastructure.Static.Data.Repositories
                 if (i < 6)
                 {
                     highestTopRates.Add(i);
-                }else if (highestTopRates.Min() < numberOfTopScores)
+                }
+                else if (highestTopRates.Min() < numberOfTopScores)
                 {
                     highestTopRates.Remove(highestTopRates.Min());
                     highestTopRates.Add(i);
                 }
             }
 
-
-
             return highestTopRates;
         }
-
         public List<int> GetMostProductiveReviewers()
         {
             int highestReviewerId = _allReviews.Max(m => m.Reviewer);
@@ -143,60 +117,81 @@ namespace Infrastructure.Static.Data.Repositories
             {
                 int id = i;
                 int count = _allReviews.Count(r => r.Reviewer == id);
-                reviewerProductivity.Add(i,count);
+                reviewerProductivity.Add(i, count);
             }
-            
+
             return reviewerProductivity.OrderByDescending(key => key.Value).Select(value => value.Key).ToList();
         }
+        private int MovieBelowOrAbove(int movie)
+        {
+            if (movie < 0)
+            {
+                throw new InvalidOperationException("Movie Id must be above zero");
+            }
 
+            if (movie > _allReviews.Max(m => m.Movie))
+            {
+                throw new InvalidOperationException("Movie Id is above range");
+            }
+
+            return movie;
+        }
         public List<int> GetTopRatedMovies(int amount)
         {
-            int highestId = _allReviews.Max(m => m.Movie);
+            var correctAmount = AmountBelowOrAbove(amount);
+            return _allReviews.OrderByDescending(review => review.Grade).Select(review => review.Movie).Distinct()
+                .Take(correctAmount).ToList();
+        }
+        public List<int> GetTopMoviesByReviewer(int reviewer)
+        {
+            var rev = GetReviewer(reviewer);
+            {
+                return _allReviews.OrderByDescending(review => review.Grade)
+                    .ThenByDescending(review => review.ReviewDate)
+                    .Where(review => review.Reviewer == rev).Select(review => review.Movie).ToList();
+            }
+        }
+        public List<int> GetReviewersByMovie(int movie)
+        {
+            var correctMovie = MovieBelowOrAbove(movie);
+            return _allReviews.OrderByDescending(review => review.Grade).ThenByDescending(review => review.ReviewDate)
+                .Where(review => review.Movie == correctMovie).Select(review => review.Reviewer).ToList();
+        }
+        private int GetReviewer(int reviewer)
+        {
+            return reviewer switch
+            {
+                <= 0 => throw new InvalidOperationException("The reviewer Id must be above zero"),
+                > 999 => throw new InvalidOperationException("Id is above range"),
+                _ => reviewer
+            };
+        }
+        private void NoReviewerFound()
+        {
+            throw new InvalidOperationException("No reviewer was found");
+        }
+        private int RateBelowOrAbove(int rate)
+        {
+            return rate switch
+            {
+                < 0 => throw new InvalidOperationException("The rating is bellow range"),
+                > 5 => throw new InvalidOperationException("The rating is above range"),
+                _ => rate
+            };
+        }
+        private int AmountBelowOrAbove(int amount)
+        {
             if (amount < 0)
             {
                 throw new InvalidOperationException("Amount must be above zero");
-            }else if (amount > highestId)
+            }
+
+            if (amount > _allReviews.Max(m => m.Movie))
             {
                 throw new InvalidOperationException("Amount is outside the range");
             }
-            else
-            {
-                return _allReviews.OrderByDescending(review => review.Grade).Select(review => review.Movie).Distinct().Take(amount).ToList(); 
-            }
+            return amount;
         }
 
-        public List<int> GetTopMoviesByReviewer(int reviewer)
-        {
-            int highestId = _allReviews.Max(m => m.Reviewer);
-            if (reviewer < 0)
-            {
-                throw new InvalidOperationException("Id must be above zero");
-            }else if (reviewer > highestId)
-            {
-                throw new InvalidOperationException("Id is outside of the range");
-            }
-            else
-            {
-                return _allReviews.OrderByDescending(review => review.Grade).ThenByDescending(review => review.ReviewDate)
-                    .Where(review => review.Reviewer == reviewer).Select(review => review.Movie).Take(5).ToList();
-            }
-        }
-
-        public List<int> GetReviewersByMovie(int movie)
-        {
-            int highestId = _allReviews.Max(m => m.Movie);
-            if (movie < 0)
-            {
-                throw new InvalidOperationException("Id must be above zero");
-            }else if (movie > highestId)
-            {
-                throw new InvalidOperationException("Id is outside of the range");
-            }
-            else
-            {
-                return _allReviews.OrderByDescending(review => review.Grade).ThenByDescending(review => review.ReviewDate)
-                    .Where(review => review.Movie == movie).Select(review => review.Reviewer).ToList();
-            }
-        }
     }
 }

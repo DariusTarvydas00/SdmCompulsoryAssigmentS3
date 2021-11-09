@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Core.Models;
+using System.Linq;
 using Domain.IRepositories;
 using Infrastructure.Static.Data.Repositories;
 using Xunit;
@@ -30,7 +30,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetNumberOfReviewsFromReviewer(reviewer));
-            Assert.Equal("No reviewer was found with id " + reviewer ,ex.Message);
+            Assert.Equal("No reviewer was found" ,ex.Message);
         }
         #endregion
 
@@ -51,7 +51,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetAverageRateFromReviewer(reviewer));
-            Assert.Equal("No reviewer was found with id " + reviewer ,ex.Message);
+            Assert.Equal("No reviewer was found" ,ex.Message);
         }
         #endregion
 
@@ -61,7 +61,6 @@ namespace Test
         {
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
             double result = repository.GetNumberOfRatesByReviewer(1, 5);
-            
             Assert.Equal(1,result);
         }
 
@@ -71,6 +70,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetNumberOfRatesByReviewer(100, 5));
+            
             Assert.Equal("No rates where found for reviewer" ,ex.Message);
         }
         
@@ -140,7 +140,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetNumberOfRates(-1,1));
-            Assert.Equal("Movie id must be above zero" ,ex.Message);
+            Assert.Equal("Movie Id must be above zero" ,ex.Message);
         }
         
         [Fact]
@@ -149,16 +149,16 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetNumberOfRates(1,-11));
-            Assert.Equal("Rate is outside of the range" ,ex.Message);
+            Assert.Equal("The rating is bellow range" ,ex.Message);
         }
         
         [Fact]
-        public void GetNumberOfRatesRateOutsideTheRangeAboveFive()
+        public void GetNumberOfRatesRateAboveRange()
         {
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetNumberOfRates(1,10));
-            Assert.Equal("Rate is outside of the range" ,ex.Message);
+            Assert.Equal("The rating is above range" ,ex.Message);
         }
         #endregion
 
@@ -177,7 +177,6 @@ namespace Test
         [Fact]
         public void GetMostProductiveReviewers()
         {
-            //How to make sure to test them correctly
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
             List<int> result = repository.GetMostProductiveReviewers();
             
@@ -190,9 +189,9 @@ namespace Test
         public void GetTopRatedMovies()
         {
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
-            List<int> result = repository.GetTopRatedMovies(4);
+            List<int> result = repository.GetTopRatedMovies(4).Take(4).ToList();
             
-            Assert.Equal(new List<int>{822109, 1358911, 1507649, 845529}, result);
+            Assert.Equal(new List<int>{1488844, 1358911, 1507649, 845529}, result);
         }
         
         [Fact]
@@ -219,7 +218,7 @@ namespace Test
         public void GetTopMoviesByReviewer()
         {
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
-            List<int> result = repository.GetTopMoviesByReviewer(2);
+            List<int> result = repository.GetTopMoviesByReviewer(2).Take(5).ToList();
             
             Assert.Equal(new List<int>{1358911,1507649, 845529, 1479907, 1636093}, result);
         }
@@ -230,7 +229,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetTopMoviesByReviewer(-2));
-            Assert.Equal("Id must be above zero" ,ex.Message);
+            Assert.Equal("The reviewer Id must be above zero" ,ex.Message);
         }
         
         [Fact]
@@ -238,8 +237,8 @@ namespace Test
         {
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
-            var ex = Assert.Throws<InvalidOperationException>(() => repository.GetTopMoviesByReviewer(200));
-            Assert.Equal("Id is outside of the range" ,ex.Message);
+            var ex = Assert.Throws<InvalidOperationException>(() => repository.GetTopMoviesByReviewer(1000));
+            Assert.Equal("Id is above range" ,ex.Message);
         }
         #endregion
 
@@ -259,7 +258,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetReviewersByMovie(-2));
-            Assert.Equal("Id must be above zero" ,ex.Message);
+            Assert.Equal("Movie Id must be above zero" ,ex.Message);
         }
         
         [Fact]
@@ -268,7 +267,7 @@ namespace Test
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);
 
             var ex = Assert.Throws<InvalidOperationException>(() => repository.GetReviewersByMovie(10000000));
-            Assert.Equal("Id is outside of the range" ,ex.Message);
+            Assert.Equal("Movie Id is above range" ,ex.Message);
         }
 
 
