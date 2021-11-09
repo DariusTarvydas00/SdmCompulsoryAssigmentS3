@@ -233,6 +233,15 @@ namespace Test
         }
         
         [Fact]
+        public void GetTopMoviesByReviewerIdEqualZero()
+        {
+            IBEReviewRepository repository = new BEReviewRepository(_mockReader);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => repository.GetTopMoviesByReviewer(0));
+            Assert.Equal("The reviewer Id must be above zero" ,ex.Message);
+        }
+        
+        [Fact]
         public void GetTopMoviesByReviewerIdAboveTheRange()
         {
             IBEReviewRepository repository = new BEReviewRepository(_mockReader);

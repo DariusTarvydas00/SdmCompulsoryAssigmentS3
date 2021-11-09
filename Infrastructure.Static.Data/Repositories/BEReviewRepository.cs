@@ -24,7 +24,7 @@ namespace Infrastructure.Static.Data.Repositories
             int numberOfReviews = _allReviews.Count(review => review.Reviewer == reviewer);
             if (numberOfReviews == 0)
             {
-                NoReviewerFound();
+                throw new InvalidOperationException("No reviewer was found");
             }
 
             return numberOfReviews;
@@ -37,7 +37,7 @@ namespace Infrastructure.Static.Data.Repositories
 
             if (totalReviewsArray.Count() == null)
             {
-                NoReviewerFound();
+                throw new InvalidOperationException("No reviewer was found");
             }
 
             foreach (var review in totalReviewsArray)
@@ -165,10 +165,6 @@ namespace Infrastructure.Static.Data.Repositories
                 > 999 => throw new InvalidOperationException("Id is above range"),
                 _ => reviewer
             };
-        }
-        private void NoReviewerFound()
-        {
-            throw new InvalidOperationException("No reviewer was found");
         }
         private int RateBelowOrAbove(int rate)
         {
